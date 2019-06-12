@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -19,8 +20,8 @@ import javax.swing.JLabel;
 
 public class Client {
     /* Variables required for graphics and logic portion of the game. Grid
-       width can be an odd number greater than 3, and both client and 
-       server must use the same value. */
+       length can be an odd number greater than 3 (ideally 5 < L < 21), and
+       both client and server must use the same value. */
     private static final int GRID_LENGTH = 7;
     private JFrame frame = new JFrame("Dots&Boxes");
     private JLabel messageLabel = new JLabel("");
@@ -45,16 +46,19 @@ public class Client {
             error.printStackTrace();
         }
 
-        /* Add background panel and the game graphics to the window frame. */
+        /* Add game graphics and message label to the window frame. */
         JPanel boardPanel = new JPanel();
-        boardPanel.setBackground(Color.black);
+        boardPanel.setBackground(Color.BLACK);
         boardPanel.setLayout(new GridLayout(GRID_LENGTH, GRID_LENGTH));
         for (int i = 0; i < board.length; i++) {
             board[i] = new Square(i);
             boardPanel.add(board[i]);
         }
+        messageLabel.setOpaque(true);
+        messageLabel.setBackground(Color.LIGHT_GRAY);
+        messageLabel.setHorizontalAlignment(JLabel.CENTER);
+        messageLabel.setFont(new Font("Serif", Font.BOLD, 14));
         frame.getContentPane().add(boardPanel, "Center");
-        messageLabel.setBackground(Color.lightGray);
         frame.getContentPane().add(messageLabel, "South");
     }
 
@@ -62,7 +66,9 @@ public class Client {
         /* This class handles the individual squares (50px by 50px) that
            make up the game's grid. */
         private static final long serialVersionUID = 1L;
+        private Color lineColor = Color.LIGHT_GRAY;
         private int position;
+        
 
         public Square(int pos) {
             this.position = pos;
@@ -83,30 +89,29 @@ public class Client {
 
         @Override
         public void paintComponent(Graphics g) {
-            int row = this.position / GRID_LENGTH;
-            Graphics2D gDraw = (Graphics2D) g;
-
+            super.paintComponent(g);
+            
             /* Turn on anti-aliasing so the grid dots look better. */
+            Graphics2D gDraw = (Graphics2D) g;
             gDraw.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                                    RenderingHints.VALUE_ANTIALIAS_ON);
 
+            int row = this.position / GRID_LENGTH;
             if (this.position % 2 != 0) {
+                g.setColor(lineColor);
                 if (row % 2 == 0) {
                     /* Draw a horizontal line on the grid. */
-                    gDraw.fillRect(0, 17, 50, 16);
+                    g.fillRect(0, 17, 50, 16);
                 } else {
                     /* Draw a vertical line on the grid. */
-                    gDraw.fillRect(17, 0, 16, 50);
+                    g.fillRect(17, 0, 16, 50);
                 }
             } else if (row % 2 == 0) {
-                /* Draw a dot on the grid. */
-                gDraw.setColor(Color.LIGHT_GRAY);
-                gDraw.fillOval(10, 10, 30, 30);
-                gDraw.fillRect(5, 17, 40, 16);
-                gDraw.fillRect(17, 5, 16, 40);
-            } else {
-                /* Draw squares for the center of a grid square. */
-                gDraw.fillRect(0, 0, 50, 50);
+                /* Draw the grid vertices. */
+                g.setColor(Color.GRAY);
+                g.fillOval(10, 10, 30, 30);
+                g.fillRect(6, 17, 38, 16);
+                g.fillRect(17, 6, 16, 38);
             }
         }
     }
@@ -134,17 +139,15 @@ public class Client {
         String response;
         int position;
         char msgType;
- 
+     
         while (!endGame) {
             response = inBuffer.readLine();
             msgType = response.isEmpty() ? ' ' : response.charAt(0);
             switch (msgType) {
                 case 'S': /* Grid square has been completed */
                     position = Integer.parseInt(response.substring(4));
-                    board[position].setForeground(
-                        (response.charAt(2) == 'B') ? Color.blue : Color.red);
                     board[position].setBackground(
-                        (response.charAt(2) == 'B') ? Color.blue : Color.red);
+                        (response.charAt(2) == 'B') ? Color.BLUE : Color.RED);
                     break;
 
                 case 'V': /* Server message validating player's move. */
@@ -156,8 +159,9 @@ public class Client {
                     }
                     /* Set color of the grid line chosen by the player. */
                     position = Integer.parseInt(response.substring(4));
-                    board[position].setForeground(
-                            (playerColor == 'B') ? Color.blue : Color.red);
+                    board[position].lineColor =
+                                (playerColor == 'B') ? Color.BLUE : Color.RED;
+                    board[position].repaint();
                     break;
 
                 case 'O': /* Server message validating opponent's move. */
@@ -165,20 +169,21 @@ public class Client {
                         /* Opponent completed a grid square; can move again. */
                         messageLabel.setText("Opponent goes again.");
                     } else {
-                        messageLabel.setText("Opponent moved, your turn.");
+                        messageLabel.setText("Your turn.");
                     }
                     position = Integer.parseInt(response.substring(4));
-                    board[position].setForeground(
-                            (playerColor == 'B') ? Color.red : Color.blue);
+                    board[position].lineColor =
+                                (playerColor == 'B') ? Color.RED : Color.BLUE;
+                    board[position].repaint();
                     break;
 
                 case 'E': /* Game ended and winner is determined by server. */
                     if (response.charAt(2) == playerColor) {
-                        messageLabel.setText("YOU WIN!");
+                        messageLabel.setText("YOU WIN :)");
                     } else if (response.charAt(2) == 'T') {
                         messageLabel.setText("YOU TIED");
                     } else {
-                        messageLabel.setText("YOU LOSE");
+                        messageLabel.setText("YOU LOSE :(");
                     }
                     endGame = true;
                     break;
