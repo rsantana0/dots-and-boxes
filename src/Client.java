@@ -21,10 +21,10 @@ public class Client {
     /* Variables required for graphics and logic portion of the game. Grid
        width can be an odd number greater than 3, and both client and 
        server must use the same value. */
-    private static final int GRID_WIDTH = 9;
+    private static final int GRID_LENGTH = 7;
     private JFrame frame = new JFrame("Dots&Boxes");
     private JLabel messageLabel = new JLabel("");
-    private Square[] board = new Square[GRID_WIDTH * GRID_WIDTH];
+    private Square[] board = new Square[GRID_LENGTH * GRID_LENGTH];
     private char playerColor;
 
     /* Variables required for network portion of game. Client must use the
@@ -48,7 +48,7 @@ public class Client {
         /* Add background panel and the game graphics to the window frame. */
         JPanel boardPanel = new JPanel();
         boardPanel.setBackground(Color.black);
-        boardPanel.setLayout(new GridLayout(GRID_WIDTH, GRID_WIDTH));
+        boardPanel.setLayout(new GridLayout(GRID_LENGTH, GRID_LENGTH));
         for (int i = 0; i < board.length; i++) {
             board[i] = new Square(i);
             boardPanel.add(board[i]);
@@ -83,7 +83,7 @@ public class Client {
 
         @Override
         public void paintComponent(Graphics g) {
-            int row = (this.position / GRID_WIDTH) + 1;
+            int row = this.position / GRID_LENGTH;
             Graphics2D gDraw = (Graphics2D) g;
 
             /* Turn on anti-aliasing so the grid dots look better. */
@@ -91,31 +91,32 @@ public class Client {
                                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             if (this.position % 2 != 0) {
-                if (row % 2 != 0) {
+                if (row % 2 == 0) {
                     /* Draw a horizontal line on the grid. */
                     gDraw.fillRect(0, 17, 50, 16);
                 } else {
                     /* Draw a vertical line on the grid. */
                     gDraw.fillRect(17, 0, 16, 50);
                 }
-            } else if (row % 2 != 0) {
+            } else if (row % 2 == 0) {
                 /* Draw a dot on the grid. */
                 gDraw.setColor(Color.LIGHT_GRAY);
                 gDraw.fillOval(10, 10, 30, 30);
                 gDraw.fillRect(5, 17, 40, 16);
                 gDraw.fillRect(17, 5, 16, 40);
+            } else {
+                /* Draw squares for the center of a grid square. */
+                gDraw.fillRect(0, 0, 50, 50);
             }
         }
     }
 
     private void endGame() {
         /* Close socket and window when player quits. */
-        outBuffer.println("Q");
+        outBuffer.println("Q " + playerColor);
         try {
             socket.close();
-        } catch (IOException error) {
-            error.printStackTrace();
-        }
+        } catch (IOException e) {}
         frame.dispose();
     }
 
@@ -141,6 +142,8 @@ public class Client {
                 case 'S': /* Grid square has been completed */
                     position = Integer.parseInt(response.substring(4));
                     board[position].setForeground(
+                        (response.charAt(2) == 'B') ? Color.blue : Color.red);
+                    board[position].setBackground(
                         (response.charAt(2) == 'B') ? Color.blue : Color.red);
                     break;
 
@@ -188,12 +191,12 @@ public class Client {
     }
 
     public void play() {
-        /* Handle client/server communication while game is in progress. */
         String serverMessage;
 
         try {
             while (true) {
-                /* Get player's color from the server welcome (W) message. */
+                /* Get player's color from the server welcome (W) message.
+                   Append space to prevent error from reading empty string. */
                 serverMessage = inBuffer.readLine() + " ";
                 if (serverMessage.charAt(0) == 'W') {
                     playerColor = serverMessage.charAt(2);
@@ -215,12 +218,13 @@ public class Client {
 
     public static void main(String[] args) throws Exception{
         /* Determine whether the client should connect to a local server or
-           to a server IP address provided by the player. */
+           to a server IP address provided by the player. Set window size
+           to the grid size plus extra space for other graphical components. */
+        String serverAddress = (args.length == 0) ? "localhost" : args[0];
         while (true) {
-            String serverAddress = (args.length == 0) ? "localhost" : args[0];
             Client player = new Client(serverAddress);
             player.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            player.frame.setSize(GRID_WIDTH*50+10, GRID_WIDTH*50+50);
+            player.frame.setSize(GRID_LENGTH*50+10, GRID_LENGTH*50+50);
             player.frame.setVisible(true);
             player.frame.setResizable(false);
             player.play();
