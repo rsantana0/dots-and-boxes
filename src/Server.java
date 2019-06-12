@@ -216,8 +216,8 @@ class Game {
                     command = input.readLine();
                     command = command.isEmpty() ? " " : command;
                     if (command.charAt(0) == 'M') {
-                        /* Check if current player's move is valid and if the game
-                           has ended. */
+                        /* Check if current player's move is valid and if the
+                           game has ended. */
                         int position = Integer.parseInt(command.substring(2));
                         if (legalMove(position, this)) {
                             if (boardFilledUp()) {
