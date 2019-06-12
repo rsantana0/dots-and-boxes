@@ -21,7 +21,9 @@ public class Server {
 
     public static void main(String[] args) {
         /* Open the server socket and wait for players to connect. Assign the
-           first player to color blue and second player to the color red. */
+           first player to color blue and second player to the color red.
+           Multiple games can be running at the same time, but each instance
+           can only have two players playing. */
         ServerSocket listener = null;      
         try {
             listener = new ServerSocket(PORT);
@@ -47,6 +49,10 @@ public class Server {
 }
 
 class Game {
+    /* This class handles the logic for each instance of the game that
+       is currently running on the server. Grid length can be an odd
+       number greater than 3 (ideally 5 < L < 21), and both client 
+       and server must use the same value. */
     private static final int GRID_LENGTH = 7;
     private char[] board = new char[GRID_LENGTH*GRID_LENGTH];
     private int bluePoints = 0;
@@ -55,8 +61,10 @@ class Game {
 
     public char gameWinner() {
         /* Find out which player has the most points. */
+        System.out.println("\n***Game Ended***");
         System.out.println("Blue: " + bluePoints + " points");
         System.out.println("Red: " + redPoints + " points");
+        System.out.println("****************\n");
         if (bluePoints == redPoints) { 
             return 'T';
         } else { 
@@ -129,6 +137,8 @@ class Game {
             
             int numSquares = countCompletedSquares(position, player);
             if (numSquares > 0) {
+                /* Add the number of completed squares to the current
+                   player's score. */
                 currentPlayer.thisPlayerMoved(position, true);
                 if (player.playerColor == 'B') {
                     bluePoints += numSquares;
@@ -136,6 +146,7 @@ class Game {
                     redPoints += numSquares;
                 }
             } else {
+                /* Finish current player's turn and let the opponent play. */
                 currentPlayer.thisPlayerMoved(position, false);
                 currentPlayer = currentPlayer.opponent;
             }
@@ -147,6 +158,7 @@ class Game {
     }
 
     class Player extends Thread {
+        /* Use a thread to handle messages to and from each client. */
         private BufferedReader input;
         private PrintWriter output;
         private Socket socket;
@@ -154,6 +166,7 @@ class Game {
         private char playerColor;
 
         public Player(Socket socket, char pColor) {
+            /* Open the socket to the client and send welcome message. */
             this.socket = socket;
             this.playerColor = pColor;
             try {
@@ -173,12 +186,16 @@ class Game {
         }
 
         public void thisPlayerMoved(int position, boolean goAgain) {
+            /* Notify clients if the current player has made a valid move, and
+               if they get an extra turn. */
             String again = goAgain ? "Y" : "N";
             output.println("V " + again + " " + position);
             opponent.output.println("O " + again + " " + position);
         }
 
         public void squareCompleted(int position) {
+            /* Notify clients the position and color associated with a
+               completed grid square. */
             String message = "S " + playerColor + " " + position;
             output.println(message);
             opponent.output.println(message);
@@ -199,6 +216,8 @@ class Game {
                     command = input.readLine();
                     command = command.isEmpty() ? " " : command;
                     if (command.charAt(0) == 'M') {
+                        /* Check if current player's move is valid and if the game
+                           has ended. */
                         int position = Integer.parseInt(command.substring(2));
                         if (legalMove(position, this)) {
                             if (boardFilledUp()) {
@@ -211,7 +230,9 @@ class Game {
                         }                        
                     } else if (command.charAt(0) == 'Q') {
                         /* Player has quit the game. */
-                        break;
+                        if (command.charAt(2) == playerColor) {
+                            return;
+                        }
                     }
                 }
             } catch (Exception e) {
