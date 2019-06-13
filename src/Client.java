@@ -179,11 +179,11 @@ public class Client {
 
                 case 'E': /* Game ended and winner is determined by server. */
                     if (response.charAt(2) == playerColor) {
-                        messageLabel.setText("YOU WIN :)");
+                        messageLabel.setText("YOU WON :)");
                     } else if (response.charAt(2) == 'T') {
                         messageLabel.setText("YOU TIED");
                     } else {
-                        messageLabel.setText("YOU LOSE :(");
+                        messageLabel.setText("YOU LOST :(");
                     }
                     endGame = true;
                     break;
