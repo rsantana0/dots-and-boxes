@@ -14,7 +14,8 @@ The server application must be running before any client attempts to connect to 
 
 ```bash
 java Server
-
+```
+```bash
 java Client [Server IP Address]
 ```
 
